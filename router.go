@@ -142,6 +142,13 @@ type Router struct {
 	// Custom OPTIONS handlers take priority over automatic replies.
 	HandleOPTIONS bool
 
+	// If enabled, the router will match the encoded original path to
+	// the routes.
+	// For eg. "/path/foo%2Fbar/to" will match the path "/path/{var}/to".
+	// If disabled, the router will match the unencoded path to the routes.
+	// For eg. "/path/foo%2Fbar/to" will match the path "/path/foo/bar/to"'
+	UseEncodedPath bool
+
 	// Configurable http.Handler which is called when no matching route is
 	// found. If it is not set, http.NotFound is used.
 	NotFound http.Handler
@@ -327,7 +334,13 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		defer r.recv(w, req)
 	}
 
-	path := req.URL.Path
+	var path string
+
+	if r.UseEncodedPath {
+		path = req.URL.EscapedPath()
+	} else {
+		path = req.URL.Path
+	}
 
 	if root := r.trees[req.Method]; root != nil {
 		if handle, ps, tsr := root.getValue(path); handle != nil {
